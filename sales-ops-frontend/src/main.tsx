@@ -6,7 +6,7 @@ import QueryProvider from './providers/QueryProvider.tsx';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryProvider>  // ← Envuelve TODA la app
+    <QueryProvider>  
       <App />
     </QueryProvider>
   </React.StrictMode>,
