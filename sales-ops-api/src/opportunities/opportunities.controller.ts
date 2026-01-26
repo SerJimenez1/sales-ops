@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';  // ← Aquí el fix
 import { OpportunitiesService } from './opportunities.service';
 import { CreateOpportunityDto } from './dto/create-opportunity.dto'; // si lo tienes
 
@@ -11,7 +11,7 @@ export class OpportunitiesController {
     return this.opportunitiesService.findAll();
   }
 
-  @Get('grouped')  // ← ¡Esta es la ruta clave!
+  @Get('grouped')
   async getGrouped() {
     return this.opportunitiesService.findAllGrouped();
   }
@@ -19,5 +19,10 @@ export class OpportunitiesController {
   @Post()
   create(@Body() createOpportunityDto: CreateOpportunityDto) {
     return this.opportunitiesService.create(createOpportunityDto);
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateDto: any) {
+    return this.opportunitiesService.update(id, updateDto);
   }
 }

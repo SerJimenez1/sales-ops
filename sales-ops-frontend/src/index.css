@@ -7,3 +7,13 @@
     background-color: #f8fafc;
   }
 }
+
+/* Ocultar scrollbar en todas las columnas pero mantener funcionalidad de scroll */
+.overflow-y-auto {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}

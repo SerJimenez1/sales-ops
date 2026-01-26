@@ -45,6 +45,12 @@ async findAllGrouped() {
   
     return grouped;
   }
+  async update(id: string, updateDto: { status?: string }) {
+    return this.prisma.opportunity.update({
+      where: { id },
+      data: updateDto,
+    });
+  }
   // Método para POST: crear una nueva oportunidad
   async create(data: {
     remitente?: string;
