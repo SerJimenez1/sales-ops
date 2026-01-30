@@ -5,16 +5,19 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración CORS – esto permite peticiones desde el frontend
+  // CORS completo para pruebas (permite TODO)
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:5174','http://localhost:3000',],  // agrega 5174 (Vite a veces cambia puerto)
+    origin: '*',  // ← Esto permite peticiones desde la TV/emulador
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  await app.listen(process.env.PORT || 3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Backend corriendo en http://192.168.18.6:${port}`);
 }
 
 bootstrap();
