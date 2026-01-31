@@ -4,39 +4,37 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("comercial") // comercial, operaciones, finanzas, admin
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String      @id @default(uuid())
+  email         String      @unique
+  name          String?
+  role          String      @default("comercial") // comercial, operaciones, finanzas, admin
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   opportunities Opportunity[] @relation("AssignedTo")
 }
 
 model Opportunity {
-  id              String   @id @default(uuid())
-  status          String   @default("en_cola") // en_cola, en_cotizacion, cotizacion_enviada, ganado, pago
-  remitente       String?
-  asunto          String?
-  body            String?
-  empresaRuc      String?
-  area            String?
-  prioridad       String   @default("media") // urgente, media, baja
-  responsableId   String?
-  slaDueDate      DateTime? // fecha vencimiento SLA
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String      @id @default(uuid())
+  status        String      @default("en_cola") // en_cola, en_cotizacion, cotizacion_enviada, ganado, pago
+  remitente     String?
+  asunto        String?
+  body          String?
+  empresaRuc    String?     // Campo para guardar el RUC detectado automáticamente
+  area          String?
+  prioridad     String      @default("media") // urgente, media, baja
+  responsableId String?
+  slaDueDate    DateTime?   // fecha vencimiento SLA
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  responsable     User?    @relation("AssignedTo", fields: [responsableId], references: [id])
-  attachments     Attachment[]
+  responsable   User?       @relation("AssignedTo", fields: [responsableId], references: [id])
+  attachments   Attachment[]
+  empresa       Empresa?    @relation("EmpresaToOpportunity", fields: [empresaRuc], references: [ruc], onDelete: SetNull) // ← onDelete: SetNull para que no rompa si el RUC no existe
 }
-
-// ... tus modelos existentes (User, Opportunity)
 
 model Attachment {
   id            String      @id @default(uuid())
@@ -52,4 +50,15 @@ model Attachment {
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@index([opportunityId])
+}
+
+model Empresa {
+  id            String      @id @default(uuid())
+  ruc           String      @unique
+  nombre        String
+  dominio       String?     @unique // ej. "fibertel.com.pe" para detección automática
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  opportunities Opportunity[] @relation("EmpresaToOpportunity") // ← Relación bidireccional corregida
 }

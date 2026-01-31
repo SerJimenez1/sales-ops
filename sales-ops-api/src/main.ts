@@ -7,7 +7,7 @@ async function bootstrap() {
 
   // CORS completo para pruebas (permite TODO)
   app.enableCors({
-    origin: '*',  // ← Esto permite peticiones desde la TV/emulador
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,

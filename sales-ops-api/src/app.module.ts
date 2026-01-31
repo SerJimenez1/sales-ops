@@ -1,18 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule'; // ← Agregado para cron/polling
 import { OpportunitiesModule } from './opportunities/opportunities.module';
-import { PrismaService } from './prisma/prisma.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';  // ← debe apuntar a src/auth/auth.module.ts
+import { PrismaModule } from 'prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { GmailModule } from './gmail/gmail.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(), // ← Necesario para setInterval o @Cron
     OpportunitiesModule,
     PrismaModule,
     AuthModule,
+    GmailModule,
   ],
-  providers: [PrismaService],
-  exports: [PrismaService],  // ← ¡Esto es clave! Exporta para que otros módulos lo usen
 })
 export class AppModule {}
