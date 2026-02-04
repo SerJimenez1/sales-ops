@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import Dashboard from './pages/Dashboard';
-import ListView from './pages/ListView';
+import Dashboard from './Dashboard';
+import ListView from './ListView';
 
 function Board() {
-  const [view, setView] = useState<'tablero' | 'lista'>('tablero');
+  const [view, setView] = useState<'kanban' | 'lista'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -11,14 +11,10 @@ function Board() {
       {/* Header - ULTRA COMPACTO */}
       <header className="bg-[#141414] border-b border-gray-800 px-4 py-2">
         <div className="flex items-center justify-between gap-3">
-          {/* Logo y Título - Izquierda */}
+          {/* Logo - Izquierda */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="w-7 h-7 bg-[#3a4a3a] rounded-md flex items-center justify-center">
               <span className="text-white font-bold text-sm">M</span>
-            </div>
-            <div>
-              <h1 className="text-white font-semibold text-sm leading-tight">Mejikai</h1>
-              <p className="text-gray-500 text-[10px]">CRM Comer. • B2G</p>
             </div>
           </div>
 
@@ -36,9 +32,9 @@ function Board() {
           {/* Botones de Vista - Derecha */}
           <div className="flex items-center gap-0.5 bg-[#1a1a1a] rounded p-0.5 flex-shrink-0">
             <button
-              onClick={() => setView('tablero')}
+              onClick={() => setView('kanban')}
               className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
-                view === 'tablero'
+                view === 'kanban'
                   ? 'bg-[#2a2a2a] text-white'
                   : 'text-gray-400 hover:text-white'
               }`}
@@ -61,7 +57,7 @@ function Board() {
 
       {/* Contenido principal */}
       <main>
-        {view === 'tablero' ? <Dashboard /> : <ListView />}
+        {view === 'kanban' ? <Dashboard /> : <ListView />}
       </main>
     </div>
   );

@@ -74,6 +74,7 @@ async findAllGrouped() {
         // SLA básico: 4 horas desde ahora (configurable después)
         slaDueDate: new Date(Date.now() + 4 * 60 * 60 * 1000),
       },
+      include: { responsable: true },
     });
   }
 }

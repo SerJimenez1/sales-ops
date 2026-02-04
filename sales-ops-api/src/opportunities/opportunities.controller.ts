@@ -1,10 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';  // ← Aquí el fix
+import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { OpportunitiesService } from './opportunities.service';
-import { CreateOpportunityDto } from './dto/create-opportunity.dto'; // si lo tienes
+import { CreateOpportunityDto } from './dto/create-opportunity.dto';
+import { EmailService } from '../services/email.service';  // ← Importamos el servicio
 
 @Controller('opportunities')
 export class OpportunitiesController {
-  constructor(private readonly opportunitiesService: OpportunitiesService) {}
+  constructor(
+    private readonly opportunitiesService: OpportunitiesService,
+    private readonly emailService: EmailService,  // ← Inyectamos EmailService
+  ) {}
 
   @Get()
   async findAll() {
@@ -17,8 +21,24 @@ export class OpportunitiesController {
   }
 
   @Post()
-  create(@Body() createOpportunityDto: CreateOpportunityDto) {
-    return this.opportunitiesService.create(createOpportunityDto);
+  async create(@Body() createOpportunityDto: CreateOpportunityDto) {
+    // Creamos la Opportunity trayendo el responsable
+    const newOpp = await this.opportunitiesService.create(createOpportunityDto);
+
+    // Enviar notificación al responsable (si tiene)
+    if (newOpp.responsable?.email) {
+      await this.emailService.sendEmail(
+        newOpp.responsable.email,
+        'Nueva oportunidad asignada (creada manualmente)',
+        `Se te asignó la oportunidad: ${newOpp.asunto || 'Sin asunto'}\n` +
+        `RUC: ${newOpp.empresaRuc || 'No detectado'}\n` +
+        `Prioridad: ${newOpp.prioridad}\n` +
+        `Creada: ${newOpp.createdAt.toLocaleString()}\n` +
+        `ID: ${newOpp.id}`
+      );
+    }
+
+    return newOpp;
   }
 
   @Patch(':id')

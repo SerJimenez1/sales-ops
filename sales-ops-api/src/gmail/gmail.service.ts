@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';  // Ruta correcta (ajusta si está en otra ubicación)
+import { PrismaService } from 'prisma/prisma.service';  // Ruta correcta
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { EmailService } from '../services/email.service'; // ← Importamos el servicio de email
 
 @Injectable()
 export class GmailService {
   private gmail: any;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService, // ← Inyectamos EmailService
+  ) {
     const auth = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -55,9 +59,9 @@ export class GmailService {
         let empresaRuc: string | null = null;
         let fromDomain = from.split('@').pop()?.trim().toLowerCase() || null;
         if (fromDomain && fromDomain.endsWith('>')) {
-          fromDomain = fromDomain.slice(0, -1); // Quita ">" final si existe
+          fromDomain = fromDomain.slice(0, -1);
         }
-        console.log('Dominio del remitente detectado:', fromDomain); // Log para depurar
+        console.log('Dominio del remitente detectado:', fromDomain);
 
         if (fromDomain) {
           const empresa = await this.prisma.empresa.findFirst({
@@ -72,7 +76,7 @@ export class GmailService {
         }
 
         // Crear Opportunity con detección de empresa
-        await this.prisma.opportunity.create({
+        const newOpp = await this.prisma.opportunity.create({
           data: {
             remitente: from,
             asunto: subject,
@@ -82,9 +86,23 @@ export class GmailService {
             prioridad: 'media',
             empresaRuc: empresaRuc,
           },
+          include: { responsable: true }, // ← Traemos el responsable para enviar email
         });
 
         console.log('Opportunity creada desde correo:', subject, 'Empresa/RUC:', empresaRuc || 'No detectado');
+
+        // Notificación al responsable (si tiene responsable asignado)
+        if (newOpp.responsable?.email) {
+          await this.emailService.sendEmail(
+            newOpp.responsable.email,
+            'Nueva oportunidad asignada',
+            `Se te asignó la oportunidad: ${newOpp.asunto || 'Sin asunto'}\n` +
+            `RUC: ${newOpp.empresaRuc || 'No detectado'}\n` +
+            `Prioridad: ${newOpp.prioridad}\n` +
+            `Creada: ${newOpp.createdAt.toLocaleString()}\n` +
+            `ID: ${newOpp.id}`
+          );
+        }
 
         // Marcar como leído
         await this.gmail.users.messages.modify({
