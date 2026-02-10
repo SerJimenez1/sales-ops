@@ -88,14 +88,14 @@ const ListView = () => {
                     {/* EMPRESA */}
                     <td className="py-4 px-4">
                       <span className="text-white font-bold uppercase text-sm">
-                        {opp.empresaRuc || 'Sin empresa'}
+                        {opp.empresa?.razon_social || opp.empresa?.ruc || 'Sin empresa'} {/* ← CORREGIDO AQUÍ */}
                       </span>
                     </td>
 
                     {/* ENTIDAD */}
                     <td className="py-4 px-4">
                       <span className="text-gray-300 text-sm">
-                        {opp.area || opp.entidad || 'Sin entidad'}
+                        {opp.entidad_publica?.razon_social || opp.entidad_publica?.ruc || 'Sin entidad'} {/* ← CORREGIDO AQUÍ */}
                       </span>
                     </td>
 
@@ -124,12 +124,10 @@ const ListView = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded">
-                          {opp.responsable?.name?.substring(0, 2).toUpperCase() || 
-                           opp.responsable?.substring(0, 2).toUpperCase() || 
-                           'XX'}
+                          {opp.responsable?.nombre?.substring(0, 2).toUpperCase() || 'XX'}  
                         </span>
                         <span className="text-gray-300 text-sm">
-                          {opp.responsable?.name || opp.responsable || 'Sin asignar'}
+                          {opp.responsable?.nombre || 'Sin asignar'}  
                         </span>
                       </div>
                     </td>

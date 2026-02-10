@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';  // Ruta correcta
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { EmailService } from '../services/email.service'; // ← Importamos el servicio de email
+import { EmailService } from '../services/email.service';
+import { OpportunitiesService } from '../opportunities/opportunities.service'; // ← SOLO ESTA LÍNEA AGREGADA
 
 @Injectable()
 export class GmailService {
   private gmail: any;
 
   constructor(
-    private prisma: PrismaService,
-    private emailService: EmailService, // ← Inyectamos EmailService
+    private emailService: EmailService,
+    private opportunitiesService: OpportunitiesService,
   ) {
     const auth = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
@@ -64,44 +64,28 @@ export class GmailService {
         console.log('Dominio del remitente detectado:', fromDomain);
 
         if (fromDomain) {
-          const empresa = await this.prisma.empresa.findFirst({
-            where: { dominio: fromDomain },
-          });
-          if (empresa) {
-            empresaRuc = empresa.ruc;
-            console.log('Empresa detectada por dominio:', empresa.nombre, empresa.ruc);
-          } else {
-            console.log('No se encontró empresa para dominio:', fromDomain);
-          }
+          // TODO: Buscar empresa por dominio con la nueva base de datos
+          console.log('Búsqueda de empresa por dominio pendiente de nueva BD');
         }
 
-        // Crear Opportunity con detección de empresa
-        const newOpp = await this.prisma.opportunity.create({
-          data: {
+        // Crear Opportunity automáticamente desde el correo
+        try {
+          const newOpp = await this.opportunitiesService.create({
             remitente: from,
             asunto: subject,
-            createdAt: new Date(dateStr),
-            body: email.snippet || 'Sin contenido',
-            status: 'en_cola',
+            codigo: `OPP-${Date.now()}`, // ← AGREGADO: genera un código único automático
+            body: email.snippet || 'Sin cuerpo visible',
+            empresaRuc: empresaRuc || undefined,
+            area: undefined,
             prioridad: 'media',
-            empresaRuc: empresaRuc,
-          },
-          include: { responsable: true }, // ← Traemos el responsable para enviar email
-        });
+            responsableId: undefined,
+            status: 'en_cola',
+            slaDueDate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // SLA 4 horas desde ahora
+          });
 
-        console.log('Opportunity creada desde correo:', subject, 'Empresa/RUC:', empresaRuc || 'No detectado');
-
-        // Notificación al responsable (si tiene responsable asignado)
-        if (newOpp.responsable?.email) {
-          await this.emailService.sendEmail(
-            newOpp.responsable.email,
-            'Nueva oportunidad asignada',
-            `Se te asignó la oportunidad: ${newOpp.asunto || 'Sin asunto'}\n` +
-            `RUC: ${newOpp.empresaRuc || 'No detectado'}\n` +
-            `Prioridad: ${newOpp.prioridad}\n` +
-            `Creada: ${newOpp.createdAt.toLocaleString()}\n` +
-            `ID: ${newOpp.id}`
-          );
+          console.log('Opportunity creada automáticamente desde correo:', newOpp.id);
+        } catch (createError) {
+          console.error('Error al crear Opportunity desde correo:', createError);
         }
 
         // Marcar como leído

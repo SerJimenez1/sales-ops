@@ -1,19 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'prisma/prisma.service';
+import { supabaseAdmin as supabase } from '../lib/supabase';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
-
   async getGroupedOpportunities() {
-    const opportunities = await this.prisma.opportunity.findMany({
-      include: {
-        responsable: true, // Para traer nombre del responsable
-      },
-      orderBy: {
-        createdAt: 'desc', // Orden por más reciente primero
-      },
-    });
+    const statuses = ['en_cola', 'en_cotizacion', 'cotizacion_enviada', 'ganado', 'pago'];
 
     const grouped = {
       en_cola: [],
@@ -23,23 +14,48 @@ export class DashboardService {
       pago: [],
     };
 
-    opportunities.forEach(opp => {
-      const group = grouped[opp.status];
-      if (group) {
-        group.push({
+    for (const status of statuses) {
+      const { data: opportunities, error } = await supabase
+        .from('opportunity')
+        .select(`
+          id,
+          codigo,
+          status,
+          remitente,
+          asunto,
+          body,
+          empresa_id,
+          area_id,
+          prioridad,
+          responsable_id,
+          sla_due_date,
+          created_at,
+          responsable:users!responsable_id (nombre)
+        `)
+        .eq('status', status)
+        .order('created_at', { ascending: false }); // más reciente primero
+
+      if (error) {
+        console.error(`Error al consultar oportunidades para status ${status}:`, error.message);
+        continue;
+      }
+
+      opportunities.forEach(opp => {
+        grouped[status].push({
           id: opp.id,
           asunto: opp.asunto || 'Sin asunto',
           remitente: opp.remitente || 'Desconocido',
-          empresaRuc: opp.empresaRuc || 'Sin empresa',
-          area: opp.area || 'Sin área',
+          empresaRuc: opp.empresa_id || 'Sin empresa', // si quieres RUC real, agrega join con empresa
+          area: opp.area_id || 'Sin área',
           prioridad: opp.prioridad || 'media',
-          responsable: opp.responsable ? opp.responsable.name : 'Sin asignar',
-          colaboradores: [], // Opcional, si lo agregas después
-          slaDueDate: opp.slaDueDate,
-          createdAt: opp.createdAt,
+          responsable: opp.responsable?.[0]?.nombre || 'Sin asignar', // ← CORREGIDO AQUÍ (accede al primer elemento del array)
+          colaboradores: [], // opcional
+          slaDueDate: opp.sla_due_date,
+          createdAt: opp.created_at,
+          
         });
-      }
-    });
+      });
+    }
 
     return grouped;
   }

@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getGroupedOpportunities } from '../services/api';
+import { useState } from 'react';
+import OpportunityDetailModal from '../components/OpportunityDetailModal'; // ← ajusta la ruta si es necesario
 
 const columnsConfig = [
   { id: 'en_cola', title: 'En Revisión', color: 'bg-[#1a1a1a]' },
@@ -15,6 +17,13 @@ export default function Dashboard() {
     queryFn: getGroupedOpportunities,
     refetchInterval: 60000,
   });
+
+  console.log('[DASHBOARD] grouped recibido del backend:', grouped); // ← AGREGADO AQUÍ
+
+  const [selectedOpp, setSelectedOpp] = useState<any>(null);
+
+  const openDetail = (opp: any) => setSelectedOpp(opp);
+  const closeDetail = () => setSelectedOpp(null);
 
   if (isLoading) return (
     <div className="h-screen bg-[#0a0a0a] flex items-center justify-center text-white text-sm animate-pulse">
@@ -49,7 +58,7 @@ export default function Dashboard() {
                 <button className="text-gray-500 hover:text-white text-sm leading-none">+</button>
               </div>
 
-              {/* Cards Container - Ocupa TODO el espacio disponible */}
+              {/* Cards Container */}
               <div className="flex-1 space-y-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent min-h-0">
                 {sortedItems.length === 0 ? (
                   <div className="text-center text-gray-600 py-4 text-[10px]">Sin oportunidades</div>
@@ -79,6 +88,7 @@ export default function Dashboard() {
                     return (
                       <div
                         key={opp.id}
+                        onClick={() => openDetail(opp)}
                         className="bg-[#1a1a1a] rounded p-1 border border-[#2a2a2a] hover:border-[#3a3a3a] transition-all cursor-pointer"
                       >
                         {/* Card Header - ID: text-[7px] y Badge: text-[7px] */}
@@ -87,7 +97,7 @@ export default function Dashboard() {
                             {opp.id?.slice(-4) || '0000'}
                           </span>
                           <span className="bg-[#2a2a2a] text-white text-[7px] px-0.5 py-0.5 rounded font-medium">
-                            {opp.responsable?.name?.substring(0, 2).toUpperCase() || 'XX'}
+                            {opp.responsable?.nombre?.substring(0, 2).toUpperCase() || 'XX'}
                           </span>
                         </div>
 
@@ -99,7 +109,7 @@ export default function Dashboard() {
                         {/* Company Name - text-[7px] */}
                         <p className="text-[7px] text-cyan-400 mb-1 flex items-center gap-0.5 truncate">
                           <span className="w-0.5 h-0.5 bg-cyan-400 rounded-full flex-shrink-0"></span>
-                          {opp.empresaRuc || 'Sin empresa'}
+                          {opp.empresa?.razon_social || opp.empresa?.ruc || 'Sin empresa'} {/* ← CORREGIDO AQUÍ */}
                         </p>
 
                         {/* Footer */}
@@ -139,6 +149,15 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {/* Modal de detalle */}
+      {selectedOpp && (
+        <OpportunityDetailModal
+          isOpen={true}
+          onClose={closeDetail}
+          opportunity={selectedOpp}
+        />
+      )}
     </div>
   );
 }

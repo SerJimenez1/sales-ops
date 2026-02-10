@@ -1,14 +1,18 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { GmailService } from './gmail.service';
-import { PrismaModule } from 'prisma/prisma.module';
 import { EmailModule } from '../services/email.module';  // ← Import correcto (ruta relativa)
+import { OpportunitiesModule } from '../opportunities/opportunities.module';
+import { OpportunitiesService } from '../opportunities/opportunities.service'; // ← AGREGADO: solo esta línea (import del servicio)
 
 @Module({
   imports: [
-    PrismaModule,
-    EmailModule,  // ← Aquí, en el array imports (solo una vez)
+    EmailModule,// ← Aquí, en el array imports (solo una vez)
+    OpportunitiesModule, 
   ],
-  providers: [GmailService],
+  providers: [
+    GmailService,
+    OpportunitiesService, // ← AGREGADO: solo esta línea (provider explícito)
+  ],
   exports: [GmailService],
 })
 export class GmailModule implements OnModuleInit {

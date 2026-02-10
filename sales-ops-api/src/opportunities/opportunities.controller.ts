@@ -20,6 +20,12 @@ export class OpportunitiesController {
     return this.opportunitiesService.findAllGrouped();
   }
 
+  @Get('templates/:empresaId')
+  async getTemplatesByEmpresa(@Param('empresaId') empresaId: string) {
+    const templates = await this.opportunitiesService.getTemplatesByEmpresa(empresaId);
+    return templates;
+  }
+
   @Post()
   async create(@Body() createOpportunityDto: CreateOpportunityDto) {
     // Creamos la Opportunity trayendo el responsable
@@ -40,6 +46,14 @@ export class OpportunitiesController {
 
     return newOpp;
   }
+
+  @Post(':id/create-template-copy')
+async createTemplateCopy(
+  @Param('id') opportunityId: string,
+  @Body() body: { templateId: string },
+  ) {
+  return this.opportunitiesService.createTemplateCopy(opportunityId, body);
+}
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateDto: any) {

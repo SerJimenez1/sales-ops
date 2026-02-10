@@ -29,7 +29,7 @@ export class AuthService {
       return tokens;
     } catch (error) {
       console.error('Error al obtener tokens:', error);
-      throw new Error('Fallo al obtener tokens de Google: ' + error.message);
+      throw new Error('Fallo al obtener tokens de Google: ' + (error as any).message);
     }
   }
 }
