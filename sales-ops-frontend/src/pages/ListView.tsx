@@ -59,18 +59,19 @@ const ListView = () => {
               <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">EMPRESA</th>
               <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">ENTIDAD</th>
               <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">CONCEPTO</th>
-              <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">MONTO</th>
+              <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">PRECIO REFERENCIAL</th> {/* ← Header corregido */}
               <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">ESTADO</th>
+              <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">PROVEEDOR</th>
               <th className="pb-4 px-4 text-gray-400 font-medium text-sm uppercase tracking-wider">ENCARGADO</th>
             </tr>
           </thead>
           <tbody>
             {opportunities.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-gray-500">Sin oportunidades</td>
+                <td colSpan={8} className="p-6 text-center text-gray-500">Sin oportunidades</td>
               </tr>
             ) : (
-              opportunities.map((opp, index) => {
+              opportunities.map((opp) => {
                 const statusStyle = getStatusStyle(opp.status);
                 
                 return (
@@ -78,49 +79,51 @@ const ListView = () => {
                     key={opp.id} 
                     className="border-b border-gray-800/50 hover:bg-[#1a1a1a] transition-colors"
                   >
-                    {/* COTI */}
                     <td className="py-4 px-4">
                       <span className="text-gray-500 font-mono text-sm">
                         COT-{opp.id.slice(-4)}
                       </span>
                     </td>
 
-                    {/* EMPRESA */}
                     <td className="py-4 px-4">
                       <span className="text-white font-bold uppercase text-sm">
-                        {opp.empresa?.razon_social || opp.empresa?.ruc || 'Sin empresa'} {/* ← CORREGIDO AQUÍ */}
+                        {opp.empresa?.razon_social || opp.empresa?.ruc || 'Sin empresa'}
                       </span>
                     </td>
 
-                    {/* ENTIDAD */}
                     <td className="py-4 px-4">
                       <span className="text-gray-300 text-sm">
-                        {opp.entidad_publica?.razon_social || opp.entidad_publica?.ruc || 'Sin entidad'} {/* ← CORREGIDO AQUÍ */}
+                        {opp.entidad_publica?.razon_social || opp.entidad_publica?.ruc || 'Sin entidad'}
                       </span>
                     </td>
 
-                    {/* CONCEPTO */}
                     <td className="py-4 px-4">
                       <span className="text-white text-sm">
                         {opp.asunto}
                       </span>
                     </td>
 
-                    {/* MONTO */}
                     <td className="py-4 px-4">
                       <span className="text-green-400 font-semibold text-sm">
-                        S/ {(opp.monto || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {opp.precio_referencial != null 
+                          ? `S/ ${Number(opp.precio_referencial).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                          : 'Sin precio'}
                       </span>
                     </td>
 
-                    {/* ESTADO */}
                     <td className="py-4 px-4">
                       <span className={`inline-block px-3 py-1 rounded-md text-xs font-semibold uppercase ${statusStyle.bg} ${statusStyle.text} border border-current/20`}>
                         {statusStyle.label}
                       </span>
                     </td>
 
-                    {/* ENCARGADO */}
+                    {/* ✅ PROVEEDOR AGREGADO */}
+                    <td className="py-4 px-4">
+                      <span className="text-purple-400 text-sm">
+                        {opp.proveedor?.razon_social || 'Ninguno'}
+                      </span>
+                    </td>
+
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <span className="bg-gray-700 text-white text-xs font-bold px-2 py-1 rounded">

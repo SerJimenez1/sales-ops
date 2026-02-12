@@ -24,7 +24,6 @@ export class OpportunitiesService {
     return data || [];
   }
 
-  // GET /opportunities/grouped - Para el tablero Kanban
   async findAllGrouped() {
     const statuses = [
       'en_cola',
@@ -33,9 +32,9 @@ export class OpportunitiesService {
       'ganado',
       'pago',
     ];
-
+  
     const grouped: Record<string, { items: any[]; count: number; expiredCount: number }> = {};
-
+  
     for (const status of statuses) {
       const { data, error } = await supabase
         .from('opportunity')
@@ -53,32 +52,109 @@ export class OpportunitiesService {
           prioridad,
           sla_due_date,
           created_at,
+          precio_referencial,
           responsable:users!responsable_id (nombre),
           empresa:empresa!empresa_id (ruc, razon_social),
           entidad_publica:entidad_publica!entidad_publica_id (ruc, razon_social),
+          opportunity_proveedor!opportunity_id (
+            es_seleccionado,
+            proveedor:proveedor!proveedor_id (
+              id,
+              razon_social,
+              ruc
+            )
+          ),
           opportunity_detail(*),
-          attachments:attachment!opportunity_id (*)
+          attachments:attachment!opportunity_id (*),
+          pagos:pago!opportunity_id (
+          *,
+          evidencia:attachment!evidencia_id (storage_key)
+          )
         `)
         .eq('status', status)
         .order('sla_due_date', { ascending: true });
-
+  
       if (error) {
         console.error(`Error al agrupar por ${status}:`, error.message);
         grouped[status] = { items: [], count: 0, expiredCount: 0 };
         continue;
       }
-
+  
       const now = new Date();
-      const expiredCount = data.filter(opp => opp.sla_due_date && new Date(opp.sla_due_date) < now).length;
-
+      
+      const processedData = data.map((opp: any) => {
+        const proveedorPrincipal = opp.opportunity_proveedor?.find((op: any) => op.es_seleccionado)?.proveedor || null;
+        return {
+          ...opp,
+          proveedor: proveedorPrincipal,
+        };
+      });
+  
+      const expiredCount = processedData.filter(opp => opp.sla_due_date && new Date(opp.sla_due_date) < now).length;
+  
       grouped[status] = {
-        items: data || [],
-        count: data.length,
+        items: processedData,
+        count: processedData.length,
         expiredCount,
       };
     }
-
+  
     return grouped;
+  }
+
+  // ✅ NUEVO: GET /opportunities/:id - Obtener detalle completo de una oportunidad
+  async findOne(id: string) {
+    const { data, error } = await supabase
+      .from('opportunity')
+      .select(`
+        id,
+        codigo,
+        status,
+        remitente,
+        asunto,
+        body,
+        empresa_id,
+        entidad_publica_id,
+        area_id,
+        responsable_id,
+        prioridad,
+        sla_due_date,
+        created_at,
+        updated_at,
+        precio_referencial,
+        responsable:users!responsable_id (nombre),
+        empresa:empresa!empresa_id (ruc, razon_social),
+        entidad_publica:entidad_publica!entidad_publica_id (ruc, razon_social),
+        opportunity_detail(*),
+        attachments:attachment!opportunity_id (*),
+        opportunity_proveedor!opportunity_id (
+          es_seleccionado,
+          proveedor:proveedor!proveedor_id (
+            id,
+            razon_social,
+            ruc,
+            rubro
+          )
+        ),
+        pagos:pago!opportunity_id (
+         *,
+        evidencia:attachment!evidencia_id (storage_key)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      throw new Error(`Error al obtener oportunidad: ${error.message}`);
+    }
+
+    // Extraer el proveedor principal si existe
+    const proveedorPrincipal = data.opportunity_proveedor?.find((op: any) => op.es_seleccionado)?.proveedor || null;
+
+    return {
+      ...data,
+      proveedor: proveedorPrincipal, // ✅ Agregar proveedor principal al root
+    };
   }
 
   // PATCH /opportunities/:id - Actualizar estado o campos básicos
@@ -162,13 +238,10 @@ export class OpportunitiesService {
       throw new Error('Plantilla no encontrada o inactiva');
     }
 
-    // 2. LIMPIAR la ruta (quitar prefijo "templates/" si existe)
+    // 2. Limpiar la ruta
     const cleanPath = template.storage_key.replace(/^templates\//, '');
-    
-    console.log('[DEBUG] Storage key guardado en BD:', template.storage_key);
-    console.log('[DEBUG] Clean path:', cleanPath);
 
-    // 3. DESCARGAR el archivo del bucket templates
+    // 3. Descargar del bucket templates
     const { data: fileBlob, error: downloadError } = await supabase.storage
       .from('templates')
       .download(cleanPath);
@@ -177,15 +250,13 @@ export class OpportunitiesService {
       throw new Error(`Error al descargar plantilla: ${downloadError.message}`);
     }
 
-    // 4. Preparar el nuevo nombre y ruta
+    // 4. Preparar nuevo archivo
     const extension = template.tipo === 'excel' ? 'xlsx' : 
                       template.tipo === 'word' ? 'docx' : 'pdf';
     const newFileName = `${template.nombre}-${Date.now()}.${extension}`;
     const newPath = `${opportunityId}/${newFileName}`;
 
-    console.log('[DEBUG] Nueva ruta en attachments:', newPath);
-
-    // 5. SUBIR al bucket attachments
+    // 5. Subir al bucket attachments
     const { error: uploadError } = await supabase.storage
       .from('attachments')
       .upload(newPath, fileBlob, {
@@ -206,7 +277,7 @@ export class OpportunitiesService {
       .from('attachments')
       .getPublicUrl(newPath);
 
-    // 7. Crear attachment en la oportunidad
+    // 7. Registrar en BD
     const { data: attachment, error: attachError } = await supabase
       .from('attachment')
       .insert({
@@ -221,7 +292,7 @@ export class OpportunitiesService {
           ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
           : 'application/pdf',
         size_kb: Math.round(fileBlob.size / 1024),
-        uploaded_by: null, // ← CORREGIDO: null real (sin comillas) – permite NULL en uuid
+        uploaded_by: null,
       })
       .select()
       .single();
@@ -234,5 +305,52 @@ export class OpportunitiesService {
       publicUrl: publicUrlData.publicUrl, 
       attachment 
     };
+  }
+
+  // ✅ NUEVO: Vincular proveedor a oportunidad
+  async linkProveedor(opportunityId: string, body: { proveedorId: string; esPrincipal: boolean }) {
+    // Verificar si ya existe un vínculo
+    const { data: existing } = await supabase
+      .from('opportunity_proveedor')
+      .select('id')
+      .eq('opportunity_id', opportunityId)
+      .eq('proveedor_id', body.proveedorId)
+      .maybeSingle();
+
+    if (existing) {
+      // Si ya existe, solo actualizar es_seleccionado
+      const { error } = await supabase
+        .from('opportunity_proveedor')
+        .update({ es_seleccionado: body.esPrincipal })
+        .eq('id', existing.id);
+
+      if (error) throw new Error(`Error al actualizar vínculo: ${error.message}`);
+      return { message: 'Vínculo actualizado' };
+    }
+
+    // Si es_seleccionado = true, desmarcar otros proveedores
+    if (body.esPrincipal) {
+      await supabase
+        .from('opportunity_proveedor')
+        .update({ es_seleccionado: false })
+        .eq('opportunity_id', opportunityId);
+    }
+
+    // Crear nuevo vínculo
+    const { data, error } = await supabase
+      .from('opportunity_proveedor')
+      .insert({
+        opportunity_id: opportunityId,
+        proveedor_id: body.proveedorId,
+        es_seleccionado: body.esPrincipal,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Error al vincular proveedor: ${error.message}`);
+    }
+
+    return data;
   }
 }
