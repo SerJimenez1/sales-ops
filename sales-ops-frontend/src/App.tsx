@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import ListView from './pages/ListView';
-import Graphs from './components/graphs'; // ← CORREGIDO: mayúscula G (React requiere componentes en mayúscula)
-import { LayoutDashboard, List, BarChart3 } from 'lucide-react';
+import Graphs from './components/Graphs';
+import Proveedores from './pages/Empresa';
+import { LayoutDashboard, List, BarChart3, Users } from 'lucide-react';
 
 function App() {
-  const [view, setView] = useState<'tablero' | 'lista' | 'graphs'>('tablero');
+  const [view, setView] = useState<'tablero' | 'lista' | 'graphs' | 'proveedores'>('tablero');
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
@@ -48,6 +49,17 @@ function App() {
           >
             <BarChart3 className="w-6 h-6" />
           </button>
+
+          {/* NUEVO BOTÓN: Proveedores */}
+          <button
+            onClick={() => setView('proveedores')}
+            className={`p-3 rounded-lg transition-all ${
+              view === 'proveedores' ? 'bg-[#2a2a2a] text-white' : 'text-gray-500 hover:text-white hover:bg-[#1f1f1f]'
+            }`}
+            title="Proveedores"
+          >
+            <Users className="w-6 h-6" />
+          </button>
         </div>
       </aside>
 
@@ -75,13 +87,22 @@ function App() {
               {view === 'tablero' && 'Tablero'}
               {view === 'lista' && 'Lista'}
               {view === 'graphs' && 'Gráficas'}
+              {view === 'proveedores' && 'Proveedores'}
             </div>
           </div>
         </header>
 
         {/* Contenido */}
         <main className="flex-1 overflow-auto">
-          {view === 'tablero' ? <Dashboard /> : view === 'lista' ? <ListView /> : <Graphs />} {/* ← CORREGIDO: mayúscula G */}
+          {view === 'tablero' ? (
+            <Dashboard />
+          ) : view === 'lista' ? (
+            <ListView />
+          ) : view === 'graphs' ? (
+            <Graphs />
+          ) : view === 'proveedores' ? (
+            <Proveedores />
+          ) : null}
         </main>
       </div>
     </div>

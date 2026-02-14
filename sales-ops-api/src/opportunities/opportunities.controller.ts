@@ -21,6 +21,11 @@ export class OpportunitiesController {
     return this.opportunitiesService.findAllGrouped();
   }
 
+  @Get('empresas')
+  async getEmpresas() {
+    return this.opportunitiesService.getEmpresas();
+  }
+
   @Get('templates/:empresaId')
   async getTemplatesByEmpresa(@Param('empresaId') empresaId: string) {
     return this.opportunitiesService.getTemplatesByEmpresa(empresaId);
@@ -38,11 +43,17 @@ export class OpportunitiesController {
     return data || [];
   }
 
-  // ✅ IMPORTANTE: Este endpoint debe estar ANTES de @Get(':id')
+  @Get('users')
+  async getUsuarios() {
+  return this.opportunitiesService.getUsuarios();
+}
+
+  // ✅ IMPORTANTE: Este endpoint debe estar ANTES de cualquier ruta dinámica que pueda coincidir (como :id)
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.opportunitiesService.findOne(id); // ✅ Usa el método del service
+    return this.opportunitiesService.findOne(id);
   }
+
 
   @Post()
   async create(@Body() createOpportunityDto: CreateOpportunityDto) {
@@ -72,41 +83,47 @@ export class OpportunitiesController {
   }
 
   @Post(':id/pagos')
-async crearPago(
-  @Param('id') opportunityId: string,
-  @Body() body: any, // monto, fecha_pago, metodo, banco, numero_operacion, etc.
-) {
-  const { data, error } = await supabase
-    .from('pago')
-    .insert({
-      opportunity_id: opportunityId,
-      ...body,
-    })
-    .select()
-    .single();
+  async crearPago(
+    @Param('id') opportunityId: string,
+    @Body() body: any,
+  ) {
+    const { data, error } = await supabase
+      .from('pago')
+      .insert({
+        opportunity_id: opportunityId,
+        ...body,
+      })
+      .select()
+      .single();
 
-  if (error) throw new Error(error.message);
-  return data;
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  @Post('empresas')
+async createEmpresa(@Body() body: { ruc: string; razon_social: string; email_oportunidades?: string }) {
+  return this.opportunitiesService.createEmpresa(body);
 }
 
-@Get(':id/pagos')
-async getPagos(@Param('id') opportunityId: string) {
-  const { data, error } = await supabase
-    .from('pago')
-    .select('*')
-    .eq('opportunity_id', opportunityId)
-    .order('fecha_pago', { ascending: false });
+  @Get(':id/pagos')
+  async getPagos(@Param('id') opportunityId: string) {
+    const { data, error } = await supabase
+      .from('pago')
+      .select('*')
+      .eq('opportunity_id', opportunityId)
+      .order('fecha_pago', { ascending: false });
 
-  if (error) throw new Error(error.message);
-  return data || [];
-}
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
 
+  // ✅ ÚNICO PATCH para :id (acepta empresa_id y status)
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateDto: any) {
+  async update(@Param('id') id: string, @Body() updateDto: { empresa_id?: string; status?: string; responsable_id?: string }) {
     return this.opportunitiesService.update(id, updateDto);
   }
 
-  // ✅ CORREGIDO: Usa el método linkProveedor del service
+  // ✅ Vincular proveedor
   @Patch(':id/proveedor')
   async vincularProveedor(
     @Param('id') id: string,
@@ -114,4 +131,8 @@ async getPagos(@Param('id') opportunityId: string) {
   ) {
     return this.opportunitiesService.linkProveedor(id, body);
   }
+  @Patch(':id/detail')
+async updateDetail(@Param('id') id: string, @Body() detailDto: any) {
+  return this.opportunitiesService.updateOrCreateDetail(id, detailDto);
+}
 }

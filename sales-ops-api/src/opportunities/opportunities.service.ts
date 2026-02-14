@@ -158,7 +158,7 @@ export class OpportunitiesService {
   }
 
   // PATCH /opportunities/:id - Actualizar estado o campos básicos
-  async update(id: string, updateDto: { status?: string }) {
+  async update(id: string, updateDto: { empresa_id?: string; status?: string; responsable_id?: string }) {
     const { data, error } = await supabase
       .from('opportunity')
       .update(updateDto)
@@ -353,4 +353,90 @@ export class OpportunitiesService {
 
     return data;
   }
+
+  // Listar empresas activas
+  async getEmpresas() {
+    const { data, error } = await supabase
+      .from('empresa')
+      .select('id, ruc, razon_social, email_oportunidades')
+      .eq('activo', true)
+      .order('razon_social', { ascending: true });
+    if (error) {
+      throw new Error(`Error al listar empresas: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  // ✅ NUEVO: Crear nueva empresa
+// ✅ NUEVO: Crear nueva empresa
+async createEmpresa(body: { ruc: string; razon_social: string; email_oportunidades?: string }) {
+  const { data, error } = await supabase
+    .from('empresa')
+    .insert({
+      ruc: body.ruc,
+      razon_social: body.razon_social,
+      email_oportunidades: body.email_oportunidades || null,
+      activo: true,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al crear empresa: ${error.message}`);
+  }
+
+  return data;
+}
+
+// ✅ NUEVO: Listar usuarios (para asignación de encargados)
+async getUsuarios() {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, nombre')
+    .order('nombre', { ascending: true });
+
+  if (error) {
+    throw new Error(`Error al listar usuarios: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+async updateOrCreateDetail(opportunityId: string, detailDto: any) {
+  // ✅ Limpiar campos problemáticos
+  const cleanedDto = {
+    ...detailDto,
+    fecha_limite_presentacion: detailDto.fecha_limite_presentacion || null,
+    monto_referencial: detailDto.monto_referencial ? Number(detailDto.monto_referencial) : null,
+  };
+
+  // ✅ UPSERT: Insert or update en conflict (por opportunity_id)
+  const { data, error } = await supabase
+    .from('opportunity_detail')
+    .upsert(
+      { opportunity_id: opportunityId, ...cleanedDto },
+      { onConflict: 'opportunity_id' } // ← Clave: actualiza si ya existe
+    )
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Error al guardar detail: ${error.message}`);
+  }
+
+  // ✅ Sincronizar monto a la tabla principal para que se refleje en lista/dashboard
+  if (cleanedDto.monto_referencial !== undefined) {
+    const { error: syncError } = await supabase
+      .from('opportunity')
+      .update({ precio_referencial: cleanedDto.monto_referencial })
+      .eq('id', opportunityId);
+
+    if (syncError) {
+      console.error('Error sincronizando precio_referencial:', syncError.message);
+      // No rompemos el flujo principal
+    }
+  }
+
+  return data;
+}
 }

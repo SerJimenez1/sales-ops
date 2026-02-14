@@ -27,18 +27,24 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
 
   const handleSave = async () => {
     try {
+      const cleanedDetail = {
+        ...detail,
+        fecha_limite_presentacion: detail.fecha_limite_presentacion || null,
+        monto_referencial: detail.monto_referencial ? Number(detail.monto_referencial) : null,
+      };
+  
       const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/detail`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(detail),
+        body: JSON.stringify(cleanedDetail),
       });
-
+  
       if (!res.ok) {
         const err = await res.json();
         alert('Error al guardar: ' + (err.message || 'Error desconocido'));
         return;
       }
-
+  
       alert('Cambios guardados con éxito');
       queryClient.invalidateQueries({ queryKey: ['opportunities-grouped'] });
       onClose();
@@ -49,7 +55,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
 
   const empresaId = opportunity?.empresa_id;
 
-  // ✅ CAMBIO PRINCIPAL: useQuery para currentOpportunity
   const { data: currentOpportunity, refetch: refetchOpportunity } = useQuery({
     queryKey: ['opportunity', opportunity.id],
     queryFn: async () => {
@@ -80,7 +85,16 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     },
   });
 
-  // ✅ Carga de pagos
+  // ✅ NUEVO: Query para cargar empresas
+  const { data: empresas, isLoading: empresasLoading } = useQuery({
+    queryKey: ['empresas'],
+    queryFn: async () => {
+      const res = await fetch('http://192.168.18.6:3000/opportunities/empresas');
+      if (!res.ok) throw new Error('Error al cargar empresas');
+      return res.json();
+    },
+  });
+
   const { data: pagos, isLoading: pagosLoading, refetch: refetchPagos } = useQuery({
     queryKey: ['pagos', opportunity.id],
     queryFn: async () => {
@@ -90,7 +104,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     },
   });
 
-  // Formulario nuevo pago
   const [nuevoPago, setNuevoPago] = useState({
     estado: 'pagado',
     monto: '',
@@ -135,7 +148,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     }
   };
 
-  // Subir evidencia para un pago específico
   const handleUploadEvidencia = async (file: File) => {
     if (!file) return;
 
@@ -144,7 +156,7 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
       formData.append('file', file);
       formData.append('tipo', 'evidencia_pago');
       formData.append('origen', 'manual');
-      formData.append('opportunity_id', opportunity.id); // ← usa opportunity.id (siempre existe)
+      formData.append('opportunity_id', opportunity.id);
 
       const res = await fetch(`http://192.168.18.6:3000/attachments`, {
         method: 'POST',
@@ -165,7 +177,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     }
   };
 
-  // ✅ Subir cotización del proveedor
   const handleUploadCotizacion = async (file: File) => {
     if (!file) return;
 
@@ -174,7 +185,7 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
       formData.append('file', file);
       formData.append('tipo', 'cotizacion');
       formData.append('origen', 'manual');
-      formData.append('opportunity_id', opportunity.id); // ← usa opportunity.id (siempre existe)
+      formData.append('opportunity_id', opportunity.id);
 
       const res = await fetch(`http://192.168.18.6:3000/attachments`, {
         method: 'POST',
@@ -195,6 +206,29 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     }
   };
 
+  // ✅ NUEVO: Handler para vincular empresa
+  const handleVincularEmpresa = async (empresaId: string) => {
+    try {
+      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa_id: empresaId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error al vincular empresa: ' + (err.message || 'Error desconocido'));
+        return;
+      }
+
+      alert('Empresa vinculada correctamente');
+      await refetchOpportunity();
+      queryClient.invalidateQueries({ queryKey: ['opportunities-grouped'] });
+    } catch (err) {
+      alert('Error: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+    }
+  };
+
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
@@ -204,7 +238,49 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             Detalle: {currentOpportunity?.asunto || 'Sin título'}
           </Dialog.Title>
 
-          {/* Proveedor vinculado */}
+          {/* ✅ NUEVO: Alerta si no hay empresa vinculada */}
+          {!currentOpportunity?.empresa_id && (
+            <>
+              <div className="mb-4 p-4 bg-red-900/20 border border-red-700 rounded-lg">
+                <p className="text-red-300 font-semibold mb-3">
+                  ⚠️ Empresa desconocida - Por favor vincular empresa
+                </p>
+                {empresasLoading ? (
+                  <p className="text-gray-400">Cargando empresas...</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {empresas?.map((emp: any) => (
+                      <button
+                        key={emp.id}
+                        onClick={() => handleVincularEmpresa(emp.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-sm"
+                      >
+                        {emp.razon_social || emp.ruc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* BOTÓN DEBAJO DEL BANNER ROJO */}
+              {!empresasLoading && (
+                <div className="mb-6 text-center">
+                  <button
+                    onClick={() => {
+                      window.open(`/empresas?opportunityId=${opportunity.id}`, '_blank');
+                    }}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-500 font-semibold"
+                  >
+                    + Vincular nueva empresa
+                  </button>
+                  <p className="text-sm text-gray-400 mt-2">
+                  
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
           {currentOpportunity?.proveedor && (
             <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
               <p className="text-sm text-blue-300">
@@ -214,7 +290,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             </div>
           )}
 
-          {/* Datos del correo */}
           <div className="mb-6 p-4 bg-[#1a1a1a] rounded-lg">
             <h3 className="text-lg font-semibold mb-2">Correo original</h3>
             <p><strong>Remitente:</strong> {currentOpportunity?.remitente || 'N/A'}</p>
@@ -223,7 +298,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             <p className="mt-2 whitespace-pre-wrap text-gray-300">{currentOpportunity?.body || 'Sin cuerpo'}</p>
           </div>
 
-          {/* Campos manuales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Entidad / Área usuaria</label>
@@ -251,7 +325,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             </div>
           </div>
 
-          {/* Adjuntos */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">Documentos adjuntos</h3>
             {currentOpportunity?.attachments?.length > 0 ? (
@@ -270,63 +343,64 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             )}
           </div>
 
-          {/* Formatos disponibles */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Formatos disponibles para esta empresa</h3>
-            {templatesLoading ? (
-              <p className="text-gray-500">Cargando formatos...</p>
-            ) : templates?.length === 0 ? (
-              <p className="text-gray-500">No hay formatos disponibles para esta empresa</p>
-            ) : (
-              <ul className="space-y-2">
-                {templates.map((tmpl: any) => (
-                  <li key={tmpl.id} className="flex items-center justify-between bg-[#1a1a1a] p-2 rounded">
-                    <div>
-                      <span className="text-white">{tmpl.nombre}</span>
-                      <span className="text-gray-400 text-sm ml-2">({tmpl.tipo.toUpperCase()})</span>
-                    </div>
-                    <div className="flex gap-3">
-                      <a
-                        href={`https://eitjcykqheiytqzhewrt.supabase.co/storage/v1/object/public/templates/${tmpl.storage_key}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline text-sm"
-                      >
-                        Descargar
-                      </a>
-                      <button
-                        onClick={async () => {
-                          if (!confirm('¿Crear copia de esta plantilla para esta oportunidad?')) return;
-                          try {
-                            const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/create-template-copy`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ templateId: tmpl.id }),
-                            });
-                            if (!res.ok) {
-                              const err = await res.json();
-                              alert('Error al crear copia: ' + (err.message || 'Error desconocido'));
-                              return;
+          {/* ✅ CAMBIO: Solo mostrar formatos SI hay empresa_id */}
+          {empresaId && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Formatos disponibles para esta empresa</h3>
+              {templatesLoading ? (
+                <p className="text-gray-500">Cargando formatos...</p>
+              ) : templates?.length === 0 ? (
+                <p className="text-gray-500">No hay formatos disponibles para esta empresa</p>
+              ) : (
+                <ul className="space-y-2">
+                  {templates?.map((tmpl: any) => (
+                    <li key={tmpl.id} className="flex items-center justify-between bg-[#1a1a1a] p-2 rounded">
+                      <div>
+                        <span className="text-white">{tmpl.nombre}</span>
+                        <span className="text-gray-400 text-sm ml-2">({tmpl.tipo.toUpperCase()})</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <a
+                          href={`https://eitjcykqheiytqzhewrt.supabase.co/storage/v1/object/public/templates/${tmpl.storage_key}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline text-sm"
+                        >
+                          Descargar
+                        </a>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('¿Crear copia de esta plantilla para esta oportunidad?')) return;
+                            try {
+                              const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/create-template-copy`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ templateId: tmpl.id }),
+                              });
+                              if (!res.ok) {
+                                const err = await res.json();
+                                alert('Error al crear copia: ' + (err.message || 'Error desconocido'));
+                                return;
+                              }
+                              alert('Copia creada y adjuntada correctamente!');
+                              await refetchOpportunity();
+                              queryClient.invalidateQueries({ queryKey: ['opportunities-grouped'] });
+                            } catch (err) {
+                              alert('Error: ' + (err instanceof Error ? err.message : 'Error desconocido'));
                             }
-                            alert('Copia creada y adjuntada correctamente!');
-                            await refetchOpportunity();
-                            queryClient.invalidateQueries({ queryKey: ['opportunities-grouped'] });
-                          } catch (err) {
-                            alert('Error: ' + (err instanceof Error ? err.message : 'Error desconocido'));
-                          }
-                        }}
-                        className="text-green-400 hover:underline text-sm"
-                      >
-                        Crear copia
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                          }}
+                          className="text-green-400 hover:underline text-sm"
+                        >
+                          Crear copia
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
-          {/* Proveedores disponibles */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Proveedores disponibles</h3>
             {proveedoresLoading ? (
@@ -335,7 +409,7 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
               <p className="text-gray-500">No hay proveedores registrados</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {proveedores.map((prov: any) => (
+                {proveedores?.map((prov: any) => (
                   <div key={prov.id} className="bg-[#1a1a1a] p-3 rounded flex items-center justify-between">
                     <div>
                       <p className="text-white font-medium">{prov.razon_social}</p>
@@ -372,7 +446,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             )}
           </div>
 
-          {/* Subir cotización del proveedor */}
           {currentOpportunity?.proveedor && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-2">
@@ -390,7 +463,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
             </div>
           )}
 
-          {/* Sección de pagos */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Pagos registrados</h3>
 
@@ -400,7 +472,7 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
               <p className="text-gray-500">No hay pagos registrados</p>
             ) : (
               <div className="space-y-4">
-                {pagos.map((pago: any) => (
+                {pagos?.map((pago: any) => (
                   <div key={pago.id} className="bg-[#1a1a1a] p-4 rounded-lg">
                     <p><strong>Estado:</strong> {pago.estado}</p>
                     <p><strong>Monto:</strong> S/ {pago.monto}</p>
@@ -411,7 +483,6 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
                     {pago.evidencia_id && (
                       <p>Evidencia: <a href={`https://eitjcykqheiytqzhewrt.supabase.co/storage/v1/object/public/attachments/${pago.evidencia.storage_key}`} target="_blank" className="text-blue-400">Ver</a></p>
                     )}
-                    {/* Botón subir evidencia si no tiene */}
                     {!pago.evidencia_id && (
                       <input
                         type="file"
