@@ -31,7 +31,7 @@ Vista kanban resumida optimizada para pantallas grandes (Android TV o monitor de
 Tabla compacta con todas las oportunidades, edición rápida de responsable y visualización inmediata de precio referencial.
 
 ### Gráficas Analíticas
-![Graphs](screenshots/GRAPHS.jpeg)  
+![Graphs](screenshots/VENTAS.jpeg)  
 Métricas clave: pipeline por etapas, ganadas vs perdidas, distribución por empresa/RUC y SLA promedio.
 
 ---
