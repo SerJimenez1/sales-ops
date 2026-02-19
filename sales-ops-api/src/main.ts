@@ -10,7 +10,7 @@ async function bootstrap() {
 
   // CORS completo para pruebas (permite TODO)
   app.enableCors({
-    origin: '*',
+    origin: ['https://mejikai-crm.vercel.app', 'http://localhost:5173'], // ← AGREGADA LA RUTA DE VERCEL AQUÍ
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
