@@ -32,19 +32,21 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
         fecha_limite_presentacion: detail.fecha_limite_presentacion || null,
         monto_referencial: detail.monto_referencial ? Number(detail.monto_referencial) : null,
       };
-  
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/detail`, {
+
+      // CAMBIO: Usa variable de entorno VITE_API_URL (configurada en Vercel para producción)
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${opportunity.id}/detail`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanedDetail),
       });
-  
+
       if (!res.ok) {
         const err = await res.json();
         alert('Error al guardar: ' + (err.message || 'Error desconocido'));
         return;
       }
-  
+
       alert('Cambios guardados con éxito');
       queryClient.invalidateQueries({ queryKey: ['opportunities-grouped'] });
       onClose();
@@ -58,7 +60,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
   const { data: currentOpportunity, refetch: refetchOpportunity } = useQuery({
     queryKey: ['opportunity', opportunity.id],
     queryFn: async () => {
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}`);
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${opportunity.id}`);
       if (!res.ok) throw new Error('Error al cargar oportunidad');
       return res.json();
     },
@@ -69,7 +73,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
     queryKey: ['templates', empresaId],
     queryFn: async () => {
       if (!empresaId) return [];
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/templates/${empresaId}`);
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/templates/${empresaId}`);
       if (!res.ok) throw new Error('Error al cargar plantillas');
       return res.json();
     },
@@ -79,7 +85,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
   const { data: proveedores, isLoading: proveedoresLoading } = useQuery({
     queryKey: ['proveedores'],
     queryFn: async () => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/proveedores');
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/proveedores`);
       if (!res.ok) throw new Error('Error al cargar proveedores');
       return res.json();
     },
@@ -89,7 +97,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
   const { data: empresas, isLoading: empresasLoading } = useQuery({
     queryKey: ['empresas'],
     queryFn: async () => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/empresas');
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/empresas`);
       if (!res.ok) throw new Error('Error al cargar empresas');
       return res.json();
     },
@@ -98,7 +108,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
   const { data: pagos, isLoading: pagosLoading, refetch: refetchPagos } = useQuery({
     queryKey: ['pagos', opportunity.id],
     queryFn: async () => {
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/pagos`);
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${opportunity.id}/pagos`);
       if (!res.ok) throw new Error('Error al cargar pagos');
       return res.json();
     },
@@ -120,7 +132,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
 
   const handleAgregarPago = async () => {
     try {
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/pagos`, {
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${opportunity.id}/pagos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevoPago),
@@ -158,7 +172,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
       formData.append('origen', 'manual');
       formData.append('opportunity_id', opportunity.id);
 
-      const res = await fetch(`http://192.168.18.6:3000/attachments`, {
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/attachments`, {
         method: 'POST',
         body: formData,
       });
@@ -187,7 +203,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
       formData.append('origen', 'manual');
       formData.append('opportunity_id', opportunity.id);
 
-      const res = await fetch(`http://192.168.18.6:3000/attachments`, {
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/attachments`, {
         method: 'POST',
         body: formData,
       });
@@ -209,7 +227,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
   // ✅ NUEVO: Handler para vincular empresa
   const handleVincularEmpresa = async (empresaId: string) => {
     try {
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}`, {
+      // CAMBIO: Usa variable de entorno VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${opportunity.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresa_id: empresaId }),
@@ -372,7 +392,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
                           onClick={async () => {
                             if (!confirm('¿Crear copia de esta plantilla para esta oportunidad?')) return;
                             try {
-                              const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/create-template-copy`, {
+                              // CAMBIO: Usa variable de entorno VITE_API_URL
+                              const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                              const res = await fetch(`${API_URL}/opportunities/${opportunity.id}/create-template-copy`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ templateId: tmpl.id }),
@@ -420,7 +442,9 @@ export default function OpportunityDetailModal({ isOpen, onClose, opportunity }:
                       onClick={async () => {
                         if (!confirm(`¿Vincular "${prov.razon_social}" a esta oportunidad?`)) return;
                         try {
-                          const res = await fetch(`http://192.168.18.6:3000/opportunities/${opportunity.id}/proveedor`, {
+                          // CAMBIO: Usa variable de entorno VITE_API_URL
+                          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                          const res = await fetch(`${API_URL}/opportunities/${opportunity.id}/proveedor`, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ proveedorId: prov.id, esPrincipal: true }),

@@ -249,7 +249,7 @@ PORT=3000
 
 #### Frontend (`.env` en `sales-ops-frontend/`)
 ```env
-VITE_API_URL=http://192.168.18.6:3000
+VITE_API_URL= https://sales-ops.onrender.com
 ```
 
 ### Instalación
@@ -289,14 +289,14 @@ npm install @nestjs/common @nestjs/core @supabase/supabase-js multer
 cd sales-ops-api
 npm run start:dev
 ```
-Backend corriendo en: `http://192.168.18.6:3000`
+Backend desplegado en Render: https://sales-ops.onrender.com
 
 #### Terminal 2 - Frontend
 ```bash
 cd sales-ops-frontend
 npm run dev
 ```
-Frontend corriendo en: `http://localhost:5173`
+Frontend desplegado en Vercel: https://mejikai-crm.vercel.app
 
 ### Build para Producción
 

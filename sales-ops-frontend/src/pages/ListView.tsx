@@ -12,7 +12,8 @@ const ListView = () => {
   const { data: usuarios = [] } = useQuery({
     queryKey: ['usuarios'],
     queryFn: async () => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/users');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/users`);
       if (!res.ok) throw new Error('Error al cargar usuarios');
       return res.json();
     },
@@ -22,7 +23,8 @@ const ListView = () => {
     try {
       if (isInitial) setInitialLoading(true);
       setError(null);
-      const res = await axios.get('http://192.168.18.6:3000/opportunities/grouped');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await axios.get(`${API_URL}/opportunities/grouped`);
       const allOpps = Object.values(res.data).flatMap((group: any) => group.items || []);
       setOpportunities(allOpps);
     } catch (err) {
@@ -42,7 +44,8 @@ const ListView = () => {
   // ✅ Handler para cambiar responsable
   const handleChangeResponsable = async (oppId: string, newResponsableId: string | null) => {
     try {
-      const res = await fetch(`http://192.168.18.6:3000/opportunities/${oppId}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/${oppId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responsable_id: newResponsableId || null }),

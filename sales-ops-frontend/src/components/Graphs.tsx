@@ -24,7 +24,8 @@ export default function Graphs() {
   const { data: grouped } = useQuery<GroupedData>({
     queryKey: ['opportunities-grouped'],
     queryFn: async () => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/grouped');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/grouped`);
       if (!res.ok) throw new Error('Error al cargar oportunidades');
       return res.json();
     },

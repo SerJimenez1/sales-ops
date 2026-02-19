@@ -29,7 +29,8 @@ export default function Empresas() {
   const { data: empresas, isLoading } = useQuery<Empresa[]>({
     queryKey: ['empresas'],
     queryFn: async () => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/empresas');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/empresas`);
       if (!res.ok) throw new Error('Error al cargar empresas');
       return res.json();
     },
@@ -38,7 +39,8 @@ export default function Empresas() {
   // Mutación para crear empresa
   const createMutation = useMutation({
     mutationFn: async (newEmpresa: any) => {
-      const res = await fetch('http://192.168.18.6:3000/opportunities/empresas', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/opportunities/empresas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newEmpresa, activo: true }),
